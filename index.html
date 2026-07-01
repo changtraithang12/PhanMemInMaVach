@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hệ Thống Thiết Kế & In Tem Hàng Loạt Từ Excel - Bản V7.8</title>
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@3.0.4/dist/bwip-js-min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #eef2f5; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Giao diện Web App */
+        .sidebar { width: 360px; background: #ffffff; border-right: 1px solid #dcdfe6; padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; z-index: 10; }
+        .workspace { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; background: #e0e4e8; overflow-y: auto; position: relative; }
+        
+        h3 { color: #2c3e50; font-size: 14px; border-bottom: 2px solid #3498db; padding-bottom: 3px; margin-bottom: 5px; margin-top: 5px; }
+        .form-group { margin-bottom: 6px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 2px; color: #5a5e66; }
+        .form-group input, .form-group select { width: 100%; padding: 6px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 12px; }
+        .form-group-checkbox { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+        
+        .property-box { background: #f8f9fa; border: 1px solid #e4e7ed; padding: 10px; border-radius: 6px; display: none; }
+        .property-box h4 { font-size: 12px; color: #e67e22; margin-bottom: 5px; }
+        
+        .btn { display: block; width: 100%; padding: 8px; background: #3498db; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; margin-top: 3px; }
+        .btn:hover { background: #2980b9; }
+        .btn-success { background: #2ecc71; }
+        .btn-success:hover { background: #27ae60; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-info { background: #9b59b6; }
+        
+        /* Thanh tiêu đề trên cùng vùng Workspace */
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .workspace-title { font-weight: bold; color: #2c3e50; font-size: 14px; }
+
+        /* Bộ nút điều khiển zoom */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border: 1px solid #dcdfe6;
+        }
+        .zoom-controls label { font-size: 12px; font-weight: 600; color: #34495e; white-space: nowrap; }
+        .zoom-controls select { padding: 2px 4px; border-radius: 3px; border: 1px solid #ccc; font-size: 12px; font-weight: bold; cursor: pointer; background: transparent; width: auto; }
+
+        /* Vùng chứa khung thiết kế */
+        .canvas-scroll-container {
+            align-self: stretch;
+            height: 50vh; 
+            overflow: auto;
+            padding: 40px;
+            background: #95a5a6;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .canvas-scale-wrapper {
+            transform-origin: center center;
+            transition: transform 0.15s ease;
+            display: inline-block;
+        }
+
+        .label-canvas {
+            background: #ffffff;
+            position: relative;
+            overflow: hidden;
+            width: 396.9px; 
+            height: 83.16px; 
+            border: 1px dashed #e74c3c;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* Khối quản lý danh sách Excel nâng cao */
+        .excel-config-zone {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #dcdfe6;
+            display: none;
+        }
+        .excel-table-wrapper {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e4e7ed;
+            margin-top: 8px;
+        }
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+        .excel-table th, .excel-table td {
+            padding: 6px 8px;
+            border: 1px solid #e4e7ed;
+        }
+        .excel-table th {
+            background: #f5f7fa;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        #bulk-print-zone { display: none; width: 100%; text-align: center; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #bdc3c7; }
+        .bulk-grid { display: inline-block; text-align: left; background: #fff; padding: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
+        .print-row { display: flex; flex-wrap: nowrap; margin-bottom: 10px; } /* Phục vụ Preview Web */
+
+        .draggable-element { position: absolute; cursor: move; user-select: none; padding: 1px; border: 1px dashed transparent; display: inline-block; }
+        .draggable-element:hover { border: 1px dashed #3498db; background: rgba(52, 152, 219, 0.05); }
+        .draggable-element.selected { border: 1px solid #e74c3c; background: rgba(231, 76, 60, 0.05); }
+        
+        .text-element { font-size: 14px; color: #000; line-height: 1.2; word-break: break-word; min-width: 30px; }
+        
+        .rect-element { border: 2px solid #000000; min-width: 5px; min-height: 5px; }
+        .circle-element { border: 2px solid #000000; border-radius: 50%; min-width: 5px; min-height: 5px; }
+        
+        .hline-element { border-top: 2px solid #000000; height: 0px !important; min-width: 10px; }
+        .vline-element { border-left: 2px solid #000000; width: 0px !important; min-height: 10px; }
+
+        .resizer {
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            background: #e74c3c;
+            border: 1px solid #fff;
+            display: none;
+            z-index: 10;
+        }
+        .draggable-element.selected .resizer { display: block; }
+        .resizer.rb { right: -4px; bottom: -4px; cursor: se-resize; }
+        .resizer.r  { right: -4px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+        .resizer.b  { bottom: -4px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+
+        .barcode-element > canvas { display: block !important; pointer-events: none; }
+        .barcode-element div canvas { display: none !important; }
+        .barcode-element div { display: block; pointer-events: none; }
+
+        /* Cập nhật CSS Print cho phép nhiều tem 1 hàng */
+        @media print {
+            body { background: #fff; padding: 0; margin: 0; display: block !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .sidebar, .workspace-header, .canvas-scroll-container, .excel-config-zone, h3, h4, .bulk-title-web { 
+                display: none !important; 
+                visibility: hidden !important; 
+            }
+            .workspace { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; padding: 0 !important; background: none !important; }
+            #bulk-print-zone { display: block !important; visibility: visible !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            .bulk-grid { display: block !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; background: none !important; }
+            
+            /* Dòng in (Row) sẽ chứa 1, 2, 3 tem tùy chọn và luôn ngắt trang sau mỗi dòng */
+            .print-row { display: flex !important; flex-direction: row !important; page-break-inside: avoid !important; page-break-after: always !important; margin: 0 !important; padding: 0 !important; gap: inherit !important; }
+            
+            /* Bỏ page-break-after: always ở bản thân từng tem */
+            .label-canvas { display: block !important; visibility: visible !important; border: none !important; margin: 0 !important; page-break-inside: avoid !important; position: relative !important; transform: none !important; }
+            
+            .label-canvas * { visibility: visible !important; }
+            .draggable-element { border: none !important; background: none !important; }
+            .hline-element { border-top-style: solid !important; border-bottom: none !important; border-left: none !important; border-right: none !important; height: 0px !important; }
+            .vline-element { border-left-style: solid !important; border-bottom: none !important; border-top: none !important; border-right: none !important; width: 0px !important; }
+            .rect-element { border-style: solid !important; }
+            .circle-element { border-style: solid !important; }
+            @page { size: auto; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h3>1. Kích Thước Tem Nhãn</h3>
+            <div class="form-group">
+                <select id="presetSize" onchange="applyPresetSize()">
+                    <option value="70x50">70mm x 50mm</option>
+                    <option value="105x22">105mm x 22mm</option>
+                    <option value="50x30">50mm x 30mm</option>
+                    <option value="35x22">35mm x 22mm</option>
+                    <option value="custom">Tùy chỉnh...</option>
+                </select>
+            </div>
+            <div class="form-group" style="display:inline-block; width:48%;">
+                <label>Rộng (mm):</label>
+                <input type="number" id="labelWidth" value="70" oninput="resizeCanvas()">
+            </div>
+            <div class="form-group" style="display:inline-block; width:48%; float:right;">
+                <label>Cao (mm):</label>
+                <input type="number" id="labelHeight" value="50" oninput="resizeCanvas()">
+            </div>
+            <div class="form-group" style="display:inline-block; width:48%;">
+                <label style="color:#e67e22;">Số tem/hàng:</label>
+                <input type="number" id="labelsPerRow" value="1" min="1" max="10">
+            </div>
+            <div class="form-group" style="display:inline-block; width:48%; float:right;">
+                <label style="color:#e67e22;">Khoảng cách ngang (mm):</label>
+                <input type="number" id="labelGap" value="2" min="0" step="0.5">
+            </div>
+        </div>
+
+        <div>
+            <h3>2. Kết Nối Dữ Liệu Excel</h3>
+            <div class="form-group">
+                <label style="color:#27ae60;">Excel File (.xlsx, .xls):</label>
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="handleExcelUpload(event)">
+            </div>
+            <div class="form-group">
+                <label>Các cột phát hiện trong Excel:</label>
+                <select id="excelColumnsSelect" disabled>
+                    <option value="">-- Chưa có dữ liệu Excel --</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <h3>3. Thêm Thành Phần Gốc</h3>
+            <div class="form-group">
+                <input type="text" id="textInput" value="Dữ liệu chữ mẫu">
+                <button class="btn" onclick="addTextElement()">+ Chèn chữ</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="barcodeInput" value="252524">
+                <select id="barcodeFormatSelect" style="margin-top:3px;">
+                    <option value="code128">Mã CODE 128 (Đa năng)</option>
+                    <option value="ean13">Mã EAN-13 (Đúng 13 số)</option>
+                    <option value="QR">QR Code (Mã vuông)</option>
+                </select>
+                <button class="btn" onclick="addBarcodeElement()">+ Chèn mã vạch/QR</button>
+            </div>
+            <div class="form-group" style="margin-top: 10px; border-top: 1px dashed #dcdfe6; padding-top: 10px;">
+                <label style="font-weight: bold; color: #2980b9;">+ Chèn hình học công cụ:</label>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn" style="flex:1; min-width:65px; background:#7f8c8d;" onclick="addShapeElement('rect')">⬜ Ô vuông</button>
+                    <button class="btn" style="flex:1; min-width:65px; background:#7f8c8d;" onclick="addShapeElement('circle')">⭕ Tròn</button>
+                    <button class="btn" style="flex:1; min-width:65px; background:#2c3e50;" onclick="addShapeElement('hline')">➖ Vạch Ngang</button>
+                    <button class="btn" style="flex:1; min-width:65px; background:#2c3e50;" onclick="addShapeElement('vline')">⬏ Vạch Dọc</button>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3>4. Cấu Hình Thành Phần Chọn</h3>
+            
+            <div id="textPropertyBox" class="property-box">
+                <h4>Thuộc tính chữ</h4>
+                <div class="form-group">
+                    <label>Nội dung văn bản tĩnh:</label>
+                    <input type="text" id="textEditInput" oninput="updateTextProperties()">
+                </div>
+                <div class="form-group" style="background:#e8f8f5; padding:5px; border-radius:4px;">
+                    <label style="color:#16a085; font-weight:bold;">🔗 Liên kết với cột Excel:</label>
+                    <select id="textExcelBind" onchange="bindElementToExcel('text')">
+                        <option value="">(Không liên kết - Dùng chữ tĩnh)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display:inline-block; width:48%;">
+                    <label>Cỡ chữ (px):</label>
+                    <input type="number" id="textSizeSlider" min="1" max="72" value="14" oninput="updateTextProperties()">
+                </div>
+                <div class="form-group-checkbox" style="display:inline-block; width:48%; float:right; padding-top:15px;">
+                    <input type="checkbox" id="textBoldCheckbox" onchange="updateTextProperties()">
+                    <label for="textBoldCheckbox" style="font-size:12px;">In đậm</label>
+                </div>
+            </div>
+
+            <div id="barcodePropertyBox" class="property-box">
+                <h4>Thuộc tính mã vạch / QR</h4>
+                <div class="form-group">
+                    <label>Giá trị mã tĩnh:</label>
+                    <input type="text" id="barcodeEditInput" oninput="updateBarcodeProperties()">
+                </div>
+                <div class="form-group" style="background:#e8f8f5; padding:5px; border-radius:4px;">
+                    <label style="color:#16a085; font-weight:bold;">🔗 Liên kết với cột Excel:</label>
+                    <select id="barcodeExcelBind" onchange="bindElementToExcel('barcode')">
+                        <option value="">(Không liên kết - Dùng mã tĩnh)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chuẩn loại mã:</label>
+                    <select id="barcodeEditFormat" onchange="updateBarcodeProperties()">
+                        <option value="code128">CODE 128</option>
+                        <option value="ean13">EAN-13</option>
+                        <option value="QR">QR Code</option>
+                    </select>
+                </div>
+                <div id="controlsFor1D">
+                    <div class="form-group" style="display:inline-block; width:48%;">
+                        <label>Độ rộng vạch (Scale):</label>
+                        <input type="number" id="barcodeWidthSlider" min="1" max="4" step="1" value="2" oninput="updateBarcodeProperties()">
+                    </div>
+                    <div class="form-group" style="display:inline-block; width:48%; float:right;">
+                        <label>Chiều cao vạch:</label>
+                        <input type="number" id="barcodeHeightSlider" min="10" max="150" value="20" oninput="updateBarcodeProperties()">
+                    </div>
+                    <div class="form-group">
+                        <label style="color:#2980b9;">Cỡ chữ mã vạch (px):</label>
+                        <input type="number" id="barcodeTextSizeSlider" min="1" max="30" value="12" oninput="updateBarcodeProperties()">
+                    </div>
+                </div>
+                <div id="controlsForQR" style="display:none;">
+                    <div class="form-group">
+                        <label>Kích thước QR (px):</label>
+                        <input type="number" id="qrSizeSlider" min="30" max="200" value="60" oninput="updateBarcodeProperties()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="shapePropertyBox" class="property-box">
+                <h4>Thuộc tính hình dáng / vạch kẻ</h4>
+                <div class="form-group">
+                    <label style="color:#2980b9; font-weight:bold;">Độ dày viền / vạch kẻ (mm):</label>
+                    <input type="number" id="shapeThicknessInput" min="0.3" step="0.1" value="0.5" oninput="updateShapeProperties()">
+                    <span style="font-size:10px; color:#95a5a6;">(Tối thiểu 0.3 mm ~ 1.1 px)</span>
+                </div>
+            </div>
+            
+            <button id="btnDelete" class="btn btn-danger" style="display:none;" onclick="deleteSelectedElement()">Xóa thành phần này</button>
+        </div>
+
+        <div>
+            <h3>5. Xuất Bản & In Ấn</h3>
+            <button class="btn btn-info" onclick="exportTemplateToFile()">💾 Lưu mẫu thiết kế (.json)</button>
+            <input type="file" id="importFileInput" accept=".json" onchange="importTemplateFromFile(event)" style="margin-top:4px; font-size:11px;">
+            
+            <button class="btn btn-success" style="font-size: 13px; padding: 10px; background:#e67e22; margin-top:10px;" onclick="generateBulkLabels()">🔄 Kích hoạt trộn & Xem danh sách in</button>
+            <button class="btn btn-success" style="font-size: 14px; padding: 12px; margin-top:5px;" onclick="window.print()">🖨️ Thực Hiện In Hàng Loạt</button>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <div class="workspace-header">
+            <span class="workspace-title">KHUNG THIẾT KẾ MẪU (BÀN LÀM VIỆC CHÍNH)</span>
+            
+            <div class="zoom-controls">
+                <label for="zoomSelect">Tỷ lệ:</label>
+                <select id="zoomSelect" onchange="changeZoomScale()">
+                    <option value="0.5">50%</option>
+                    <option value="1.0" selected>100%</option>
+                    <option value="1.5">150%</option>
+                    <option value="2.0">200%</option>
+                    <option value="3.0">300%</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="canvas-scroll-container">
+            <div class="canvas-scale-wrapper" id="canvasScaleWrapper">
+                <div class="label-canvas" id="labelCanvas"></div>
+            </div>
+        </div>
+
+        <div class="excel-config-zone" id="excelConfigZone">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #006994; color: white; padding: 6px 10px; border-radius: 4px 4px 0 0;">
+                <span style="font-size: 12px; font-weight: bold;">⚙️ CẤU HÌNH DÒNG IN & SỐ LƯỢNG IN CHI TIẾT</span>
+                <div style="font-size: 11px;">
+                    <label><input type="checkbox" id="checkAllExcel" checked onchange="toggleSelectAllExcel(this)"> Chọn tất cả</label>
+                    &nbsp;|&nbsp;
+                    <label>Số lượng đồng loạt: <input type="number" id="globalQtyInput" value="1" min="1" style="width:50px; padding:2px;" oninput="applyGlobalQuantity(this)"></label>
+                </div>
+            </div>
+            <div class="excel-table-wrapper">
+                <table class="excel-table" id="excelConfigTable">
+                    <thead>
+                        </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="bulk-print-zone">
+            <p style="font-weight:bold; color:#27ae60; margin-bottom:10px;" class="bulk-title-web">DANH SÁCH TEM TRỘN EXCEL THÀNH CÔNG (SẴN SÀNG IN)</p>
+            <div class="bulk-grid" id="bulkGridContainer"></div>
+        </div>
+    </div>
+
+<script>
+    const MM_TO_PX = 3.78; 
+    let selectedElement = null;
+    let excelData = null;
+    let currentZoomScale = 1.0; 
+
+    function resizeCanvas() {
+        const wMm = parseFloat(document.getElementById('labelWidth').value) || 105;
+        const hMm = parseFloat(document.getElementById('labelHeight').value) || 22;
+        const canvas = document.getElementById('labelCanvas');
+        canvas.style.width = (wMm * MM_TO_PX) + 'px';
+        canvas.style.height = (hMm * MM_TO_PX) + 'px';
+        updateScrollContainerSize();
+    }
+
+    function changeZoomScale() {
+        const zoomVal = parseFloat(document.getElementById('zoomSelect').value) || 1.0;
+        currentZoomScale = zoomVal;
+        const wrapper = document.getElementById('canvasScaleWrapper');
+        wrapper.style.transform = `scale(${zoomVal})`;
+        updateScrollContainerSize();
+    }
+
+    function updateScrollContainerSize() {
+        const canvas = document.getElementById('labelCanvas');
+        const wrapper = document.getElementById('canvasScaleWrapper');
+        if (!canvas) return;
+        const baseWidth = parseFloat(canvas.style.width);
+        const baseHeight = parseFloat(canvas.style.height);
+        wrapper.style.width = baseWidth + 'px';
+        wrapper.style.height = baseHeight + 'px';
+    }
+
+    function applyPresetSize() {
+        const preset = document.getElementById('presetSize').value;
+        if (preset !== 'custom') {
+            const sizes = preset.split('x');
+            document.getElementById('labelWidth').value = sizes[0];
+            document.getElementById('labelHeight').value = sizes[1];
+            resizeCanvas();
+        }
+    }
+
+    function handleExcelUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                excelData = XLSX.utils.sheet_to_json(worksheet);
+                if (excelData.length === 0) {
+                    alert("File Excel trống!");
+                    return;
+                }
+
+                const columns = Object.keys(excelData[0]);
+                const colSelect = document.getElementById('excelColumnsSelect');
+                colSelect.innerHTML = "";
+                colSelect.removeAttribute("disabled");
+                
+                populateExcelDropdowns(columns);
+                renderExcelConfigTable(columns, excelData);
+                alert(`Đã kết nối thành công file Excel! Phát hiện ${excelData.length} dòng dữ liệu.`);
+            } catch (err) {
+                alert("Lỗi đọc file Excel.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function populateExcelDropdowns(columns) {
+        const selectIds = ['excelColumnsSelect', 'textExcelBind', 'barcodeExcelBind'];
+        selectIds.forEach(id => {
+            const el = document.getElementById(id);
+            const firstOpt = id !== 'excelColumnsSelect' ? '<option value="">(Không liên kết - Dùng dữ liệu tĩnh)</option>' : '';
+            el.innerHTML = firstOpt + columns.map(col => `<option value="${col}">Cột: ${col}</option>`).join('');
+        });
+    }
+
+    function renderExcelConfigTable(columns, data) {
+        const tableHead = document.querySelector('#excelConfigTable thead');
+        const tableBody = document.querySelector('#excelConfigTable tbody');
+        
+        let headHtml = `<tr>
+            <th style="width:50px;">In?</th>
+            <th style="width:80px;">SL In</th>
+            ${columns.map(c => `<th>${c}</th>`).join('')}
+        </tr>`;
+        tableHead.innerHTML = headHtml;
+
+        let bodyHtml = "";
+        data.forEach((row, idx) => {
+            let defaultQty = 1;
+            for(let key in row) {
+                if(["số lượng", "soluong", "sl", "quantity", "qty"].includes(key.toLowerCase().trim())) {
+                    let val = parseInt(row[key]);
+                    if(!isNaN(val) && val > 0) defaultQty = val;
+                }
+            }
+            bodyHtml += `<tr id="excel-row-${idx}">
+                <td><input type="checkbox" class="excel-row-chk" data-index="${idx}" checked></td>
+                <td><input type="number" class="excel-row-qty" data-index="${idx}" value="${defaultQty}" min="1" style="width:60px; padding:2px;"></td>
+                ${columns.map(c => `<td>${row[c] !== undefined ? row[c] : ''}</td>`).join('')}
+            </tr>`;
+        });
+        tableBody.innerHTML = bodyHtml;
+        document.getElementById('excelConfigZone').style.display = "block";
+    }
+    function toggleSelectAllExcel(master) {
+        document.querySelectorAll('.excel-row-chk').forEach(chk => chk.checked = master.checked);
+    }
+
+    function applyGlobalQuantity(master) {
+        let val = parseInt(master.value) || 1;
+        if(val < 1) val = 1;
+        document.querySelectorAll('.excel-row-qty').forEach(input => input.value = val);
+    }
+
+    function bindElementToExcel(type) {
+        if (!selectedElement) return;
+        if (type === 'text') {
+            const bindCol = document.getElementById('textExcelBind').value;
+            selectedElement.dataset.excelBind = bindCol;
+            if(bindCol) selectedElement.innerText = `[Liên kết: ${bindCol}]`;
+        } else if (type === 'barcode') {
+            const bindCol = document.getElementById('barcodeExcelBind').value;
+            selectedElement.dataset.excelBind = bindCol;
+        }
+    }
+
+    function addTextElement(txt, top, left, size, isBold, bindCol, width) {
+        const val = txt || document.getElementById('textInput').value.trim();
+        if(!val) return;
+
+        const el = document.createElement('div');
+        el.className = 'draggable-element text-element';
+        el.innerText = val;
+        el.style.left = left || '20px';
+        el.style.top = top || '5px';
+        el.style.width = width || '150px'; 
+        
+        el.dataset.fontSize = size || "14";
+        el.style.fontSize = (size || "14") + "px";
+        el.dataset.isBold = isBold || "false";
+        el.style.fontWeight = isBold === "true" ? "bold" : "normal";
+        el.dataset.excelBind = bindCol || "";
+
+        const resizerR = document.createElement('div');
+        resizerR.className = 'resizer r';
+        el.appendChild(resizerR);
+        makeElementResizable(el, resizerR, 'horizontal');
+
+        makeElementDraggable(el);
+        document.getElementById('labelCanvas').appendChild(el);
+        selectElement(el);
+    }
+
+    function addBarcodeElement(code, top, left, format, width, height, qrSize, bindCol, altTextSize) {
+        const val = code || document.getElementById('barcodeInput').value.trim();
+        if(!val) return;
+
+        let currentFormat = format || document.getElementById('barcodeFormatSelect').value;
+        currentFormat = String(currentFormat).toLowerCase();
+
+        const el = document.createElement('div');
+        el.className = 'draggable-element barcode-element';
+        el.style.left = left || '20px';
+        el.style.top = top || '30px';
+
+        document.getElementById('labelCanvas').appendChild(el);
+
+        el.dataset.barcodeValue = val;
+        el.dataset.barcodeFormat = currentFormat;
+        el.dataset.barcodeWidth = width || "2";
+        el.dataset.barcodeHeight = height || "10";
+        el.dataset.qrSize = qrSize || "60";
+        el.dataset.altTextSize = altTextSize || "11"; 
+        el.dataset.excelBind = bindCol || "";
+
+        renderCodeGraphics(el);
+        makeElementDraggable(el);
+        selectElement(el);
+    }
+
+    function renderCodeGraphics(el) {
+        el.innerHTML = ""; 
+        const format = String(el.dataset.barcodeFormat).toLowerCase();
+        let val = String(el.dataset.barcodeValue || "").trim();
+
+        if (format === "qr") {
+            const qrDiv = document.createElement('div');
+            el.appendChild(qrDiv);
+            new QRCode(qrDiv, { text: val, width: parseInt(el.dataset.qrSize), height: parseInt(el.dataset.qrSize), correctLevel : QRCode.CorrectLevel.H });
+        } else {
+            const nativeCanvas = document.createElement('canvas');
+            el.appendChild(nativeCanvas);
+            try {
+                bwipjs.toCanvas(nativeCanvas, {
+                    bcid: format,       
+                    text: val,          
+                    scale: parseInt(el.dataset.barcodeWidth) || 2, 
+                    height: parseInt(el.dataset.barcodeHeight) || 40,    
+                    includetext: false,  
+                    textsize: parseInt(el.dataset.altTextSize) || 12,
+                    textxalign: 'center'
+                });
+            } catch (e) {
+                el.innerHTML = `<span style="color:red; font-size:11px;">Lỗi định dạng</span>`;
+            }
+        }
+    }
+
+    function addShapeElement(shapeType, top, left, width, height, thicknessMm) {
+        const el = document.createElement('div');
+        el.className = `draggable-element ${shapeType}-element`;
+        el.dataset.elementType = shapeType;
+        el.style.left = left || '40px';
+        el.style.top = top || '40px';
+        
+        const tMm = thicknessMm || 0.5;
+        el.dataset.thicknessMm = tMm;
+        const pxThick = (tMm * MM_TO_PX) + 'px';
+
+        if (shapeType === 'hline') {
+            el.style.width = width || '100px';
+            el.style.height = '0px';
+            el.style.borderTopWidth = pxThick;
+            
+            const resizerR = document.createElement('div');
+            resizerR.className = 'resizer r';
+            el.appendChild(resizerR);
+            makeElementResizable(el, resizerR, 'horizontal');
+        } else if (shapeType === 'vline') {
+            el.style.width = '0px';
+            el.style.height = height || '60px';
+            el.style.borderLeftWidth = pxThick;
+
+            const resizerB = document.createElement('div');
+            resizerB.className = 'resizer b';
+            el.appendChild(resizerB);
+            makeElementResizable(el, resizerB, 'vertical');
+        } else {
+            el.style.width = width || '60px';
+            el.style.height = height || '40px';
+            el.style.borderWidth = pxThick;
+
+            const resizerRB = document.createElement('div');
+            resizerRB.className = 'resizer rb';
+            el.appendChild(resizerRB);
+            makeElementResizable(el, resizerRB, 'both');
+        }
+
+        makeElementDraggable(el);
+        document.getElementById('labelCanvas').appendChild(el);
+        selectElement(el);
+    }
+
+    function makeElementResizable(el, resizer, direction) {
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            let startWidth = parseFloat(window.getComputedStyle(el, null).getPropertyValue('width')) || 0;
+            let startHeight = parseFloat(window.getComputedStyle(el, null).getPropertyValue('height')) || 0;
+            let startX = e.clientX;
+            let startY = e.clientY;
+
+            function doResize(moveEvent) {
+                moveEvent.preventDefault();
+                const canvas = document.getElementById('labelCanvas');
+                
+                if (direction === 'both' || direction === 'horizontal') {
+                    let newWidth = startWidth + ((moveEvent.clientX - startX) / currentZoomScale);
+                    if (el.offsetLeft + newWidth <= canvas.offsetWidth && newWidth >= 0) {
+                        el.style.width = newWidth + 'px';
+                    }
+                }
+                if (direction === 'both' || direction === 'vertical') {
+                    let newHeight = startHeight + ((moveEvent.clientY - startY) / currentZoomScale);
+                    if (el.offsetTop + newHeight <= canvas.offsetHeight && newHeight >= 0) {
+                        el.style.height = newHeight + 'px';
+                    }
+                }
+            }
+
+            function stopResize() {
+                document.removeEventListener('mousemove', doResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        });
+    }
+
+    function updateShapeProperties() {
+        if (!selectedElement || !selectedElement.dataset.elementType) return;
+        let tMm = parseFloat(document.getElementById('shapeThicknessInput').value);
+        if (isNaN(tMm) || tMm < 0.3) tMm = 0.3; 
+        
+        selectedElement.dataset.thicknessMm = tMm;
+        const pxThick = (tMm * MM_TO_PX) + 'px';
+        const type = selectedElement.dataset.elementType;
+
+        if (type === 'hline') {
+            selectedElement.style.borderTopWidth = pxThick;
+        } else if (type === 'vline') {
+            selectedElement.style.borderLeftWidth = pxThick;
+        } else {
+            selectedElement.style.borderWidth = pxThick;
+        }
+    }
+
+    /* CẬP NHẬT: Trộn nhãn và xử lý in theo cấu trúc nhiều Tem / Hàng */
+    function generateBulkLabels() {
+        const bulkZone = document.getElementById('bulk-print-zone');
+        const gridContainer = document.getElementById('bulkGridContainer');
+        
+        gridContainer.innerHTML = ""; 
+        bulkZone.style.display = "block"; 
+
+        const wMm = document.getElementById('labelWidth').value;
+        const hMm = document.getElementById('labelHeight').value;
+        const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value) || 1;
+        const labelGap = parseFloat(document.getElementById('labelGap').value) || 0;
+        
+        const templateElements = document.querySelectorAll('#labelCanvas .draggable-element');
+
+        let finalPrintItems = [];
+        if (excelData && excelData.length > 0) {
+            const checkboxes = document.querySelectorAll('.excel-row-chk');
+            const qtyInputs = document.querySelectorAll('.excel-row-qty');
+            
+            checkboxes.forEach((chk, idx) => {
+                if (chk.checked) {
+                    let quantity = parseInt(qtyInputs[idx].value) || 1;
+                    for (let q = 0; q < quantity; q++) {
+                        finalPrintItems.push(excelData[idx]);
+                    }
+                }
+            });
+        } else {
+            finalPrintItems.push({}); 
+        }
+
+        if (finalPrintItems.length === 0) {
+            alert("Vui lòng chọn ít nhất 1 dòng Excel để in!");
+            return;
+        }
+
+        let currentRow = null;
+        finalPrintItems.forEach((row, rowIndex) => {
+            // Cứ hết số lượng tem/hàng thì tạo dòng mới (.print-row)
+            if (rowIndex % labelsPerRow === 0) {
+                currentRow = document.createElement('div');
+                currentRow.className = "print-row";
+                currentRow.style.gap = (labelGap * MM_TO_PX) + 'px';
+                gridContainer.appendChild(currentRow);
+            }
+
+            const card = document.createElement('div');
+            card.className = "label-canvas";
+            card.style.width = (wMm * MM_TO_PX) + 'px';
+            card.style.height = (hMm * MM_TO_PX) + 'px';
+            card.style.display = "inline-block";
+            card.style.position = "relative";
+            card.style.border = "1px dashed #bdc3c7"; 
+
+            templateElements.forEach(tmplEl => {
+                const clone = document.createElement('div');
+                clone.style.position = "absolute";
+                clone.style.left = tmplEl.style.left;
+                clone.style.top = tmplEl.style.top;
+
+                const bindColumn = tmplEl.dataset.excelBind;
+
+                if (tmplEl.classList.contains('text-element')) {
+                    clone.className = "text-element";
+                    clone.style.fontSize = tmplEl.style.fontSize;
+                    clone.style.fontWeight = tmplEl.style.fontWeight;
+                    clone.style.width = tmplEl.style.width;
+
+                    let finalTxt = (bindColumn && row[bindColumn] !== undefined) ? row[bindColumn] : tmplEl.childNodes[0].textContent; 
+                    clone.innerText = finalTxt;
+                    card.appendChild(clone);
+                } else if (tmplEl.classList.contains('barcode-element')) {
+                    clone.className = "barcode-element";
+                    const format = String(tmplEl.dataset.barcodeFormat || "code128").toLowerCase();
+                    
+                    let finalCode = (bindColumn && row[bindColumn] !== undefined) ? row[bindColumn] : tmplEl.dataset.barcodeValue;
+                    finalCode = String(finalCode === null || finalCode === undefined ? "" : finalCode).trim(); 
+
+                    if (format === "qr") {
+                        const qrDiv = document.createElement('div');
+                        clone.appendChild(qrDiv);
+                        card.appendChild(clone);
+                        new QRCode(qrDiv, { text: finalCode, width: parseInt(tmplEl.dataset.qrSize || 60), height: parseInt(tmplEl.dataset.qrSize || 60), correctLevel : QRCode.CorrectLevel.M });
+                    } else {
+                        const bulkCanvas = document.createElement('canvas');
+                        clone.appendChild(bulkCanvas);
+                        card.appendChild(clone);
+                        try {
+                            bwipjs.toCanvas(bulkCanvas, {
+                                bcid: format,
+                                text: finalCode,
+                                scale: parseInt(tmplEl.dataset.barcodeWidth || 2),
+                                height: parseInt(tmplEl.dataset.barcodeHeight || 40),
+                                includetext: false, 
+                                textsize: parseInt(tmplEl.dataset.altTextSize || 12),
+                                textxalign: 'center'
+                            });
+
+                            const textLabel = document.createElement('div');
+                            textLabel.style.width = "100%";
+                            textLabel.style.textAlign = "center";
+                            textLabel.style.marginTop = "2px";
+                            textLabel.style.fontSize = (tmplEl.dataset.altTextSize || 12) + "px";
+                            textLabel.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+                            textLabel.style.color = "#000";
+                            textLabel.innerText = finalCode;
+                            clone.appendChild(textLabel);
+                        } catch(e) {
+                            clone.innerHTML = `<span style="color:red; font-size:11px; white-space:nowrap;">Lỗi định dạng</span>`;
+                        }
+                    }
+                } else if (tmplEl.dataset.elementType) {
+                    const shapeType = tmplEl.dataset.elementType;
+                    clone.className = `draggable-element ${shapeType}-element`;
+                    clone.style.width = tmplEl.style.width;
+                    clone.style.height = tmplEl.style.height;
+                    clone.style.borderWidth = tmplEl.style.borderWidth;
+                    clone.style.borderTopWidth = tmplEl.style.borderTopWidth;
+                    clone.style.borderLeftWidth = tmplEl.style.borderLeftWidth;
+                    clone.style.borderStyle = "solid";
+                    clone.style.borderColor = "#000000";
+                    clone.style.borderRadius = tmplEl.style.borderRadius;
+                    card.appendChild(clone);
+                }
+            });
+            // Gắn tem vào dòng hiện tại thay vì gắn trực tiếp vào bảng chung
+            currentRow.appendChild(card);
+        });
+
+        bulkZone.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateTextProperties() {
+        if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
+        const newText = document.getElementById('textEditInput').value;
+        const newSize = document.getElementById('textSizeSlider').value;
+        const isBold = document.getElementById('textBoldCheckbox').checked;
+        
+        if(!selectedElement.dataset.excelBind) {
+            selectedElement.childNodes[0].textContent = newText;
+        }
+        selectedElement.dataset.fontSize = newSize;
+        selectedElement.style.fontSize = newSize + "px";
+        selectedElement.dataset.isBold = isBold ? "true" : "false";
+        selectedElement.style.fontWeight = isBold ? "bold" : "normal";
+    }
+
+    function updateBarcodeProperties() {
+        if (!selectedElement || !selectedElement.classList.contains('barcode-element')) return;
+        const newCode = document.getElementById('barcodeEditInput').value.trim();
+        const newFormat = String(document.getElementById('barcodeEditFormat').value).toLowerCase();
+        
+        if(!selectedElement.dataset.excelBind) {
+            selectedElement.dataset.barcodeValue = newCode;
+        }
+        selectedElement.dataset.barcodeFormat = newFormat;
+        
+        if(newFormat === "qr") {
+            document.getElementById('controlsFor1D').style.display = 'none';
+            document.getElementById('controlsForQR').style.display = 'block';
+            selectedElement.dataset.qrSize = document.getElementById('qrSizeSlider').value;
+        } else {
+            document.getElementById('controlsFor1D').style.display = 'block';
+            document.getElementById('controlsForQR').style.display = 'none';
+            selectedElement.dataset.barcodeWidth = document.getElementById('barcodeWidthSlider').value;
+            selectedElement.dataset.barcodeHeight = document.getElementById('barcodeHeightSlider').value;
+            selectedElement.dataset.altTextSize = document.getElementById('barcodeTextSizeSlider').value; 
+        }
+        renderCodeGraphics(selectedElement);
+    }
+
+    function makeElementDraggable(el) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        el.onmousedown = function(e) {
+            e = e || window.event;
+            if(e.target.tagName === 'SELECT' || e.target.classList.contains('resizer')) return;
+            e.preventDefault();
+            selectElement(el);
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = function() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            };
+            document.onmousemove = function(e) {
+                e = e || window.event;
+                e.preventDefault();
+                
+                pos1 = (pos3 - e.clientX) / currentZoomScale;
+                pos2 = (pos4 - e.clientY) / currentZoomScale;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                
+                let newTop = el.offsetTop - pos2;
+                let newLeft = el.offsetLeft - pos1;
+                const canvas = document.getElementById('labelCanvas');
+                
+                if (newTop < 0) newTop = 0;
+                if (newLeft < 0) newLeft = 0;
+                if (newTop + el.offsetHeight > canvas.offsetHeight) newTop = canvas.offsetHeight - el.offsetHeight;
+                if (newLeft + el.offsetWidth > canvas.offsetWidth) newLeft = canvas.offsetWidth - el.offsetWidth;
+
+                el.style.top = newTop + "px";
+                el.style.left = newLeft + "px";
+            };
+        }
+    }
+
+    function selectElement(el) {
+        if(selectedElement) selectedElement.classList.remove('selected');
+        selectedElement = el;
+        selectedElement.classList.add('selected');
+        
+        document.getElementById('btnDelete').style.display = 'block';
+        document.getElementById('textPropertyBox').style.display = 'none';
+        document.getElementById('barcodePropertyBox').style.display = 'none';
+        document.getElementById('shapePropertyBox').style.display = 'none';
+
+        if (el.classList.contains('text-element')) {
+            document.getElementById('textPropertyBox').style.display = 'block';
+            document.getElementById('textEditInput').value = el.dataset.excelBind ? "" : el.childNodes[0].textContent;
+            document.getElementById('textSizeSlider').value = el.dataset.fontSize || 14;
+            document.getElementById('textBoldCheckbox').checked = (el.dataset.isBold === "true");
+            document.getElementById('textExcelBind').value = el.dataset.excelBind || "";
+        } else if (el.classList.contains('barcode-element')) {
+            document.getElementById('barcodePropertyBox').style.display = 'block';
+            const format = String(el.dataset.barcodeFormat).toLowerCase();
+            document.getElementById('barcodeEditInput').value = el.dataset.excelBind ? "" : el.dataset.barcodeValue;
+            document.getElementById('barcodeEditFormat').value = format;
+            document.getElementById('barcodeExcelBind').value = el.dataset.excelBind || "";
+            
+            if(format === "qr") {
+                document.getElementById('controlsFor1D').style.display = 'none';
+                document.getElementById('controlsForQR').style.display = 'block';
+                document.getElementById('qrSizeSlider').value = el.dataset.qrSize || 60;
+            } else {
+                document.getElementById('controlsFor1D').style.display = 'block';
+                document.getElementById('controlsForQR').style.display = 'none';
+                document.getElementById('barcodeWidthSlider').value = el.dataset.barcodeWidth || 2;
+                document.getElementById('barcodeHeightSlider').value = el.dataset.barcodeHeight || 40;
+                document.getElementById('barcodeTextSizeSlider').value = el.dataset.altTextSize || 12; 
+            }
+        } else if (el.dataset.elementType) {
+            document.getElementById('shapePropertyBox').style.display = 'block';
+            document.getElementById('shapeThicknessInput').value = el.dataset.thicknessMm || 0.5;
+        }
+    }
+
+    function deleteSelectedElement() {
+        if(selectedElement) {
+            selectedElement.remove();
+            selectedElement = null;
+            document.getElementById('btnDelete').style.display = 'none';
+            document.getElementById('textPropertyBox').style.display = 'none';
+            document.getElementById('barcodePropertyBox').style.display = 'none';
+            document.getElementById('shapePropertyBox').style.display = 'none';
+        }
+    }
+
+    /* CẬP NHẬT: Thêm lưu trữ layout (tem/hàng, khoảng cách) khi xuất file JSON */
+    function exportTemplateToFile() {
+        const elements = [];
+        document.querySelectorAll('#labelCanvas .draggable-element').forEach(item => {
+            const isText = item.classList.contains('text-element');
+            const isShape = !!item.dataset.elementType;
+            elements.push({
+                type: isText ? 'text' : (isShape ? 'shape' : 'barcode'),
+                elementType: item.dataset.elementType || '',
+                top: item.style.top,
+                left: item.style.left,
+                width: item.style.width || '',
+                height: item.style.height || '',
+                thicknessMm: isShape ? item.dataset.thicknessMm : '',
+                textValue: isText ? item.childNodes[0].textContent : '',
+                fontSize: isText ? item.dataset.fontSize : '',
+                isBold: isText ? item.dataset.isBold : '',
+                barcodeValue: (!isText && !isShape) ? item.dataset.barcodeValue : '',
+                barcodeFormat: (!isText && !isShape) ? String(item.dataset.barcodeFormat).toLowerCase() : 'code128',
+                barcodeWidth: (!isText && !isShape) ? item.dataset.barcodeWidth : '',
+                barcodeHeight: (!isText && !isShape) ? item.dataset.barcodeHeight : '',
+                qrSize: (!isText && !isShape) ? item.dataset.qrSize : '',
+                altTextSize: (!isText && !isShape) ? item.dataset.altTextSize : '', 
+                excelBind: item.dataset.excelBind || ''
+            });
+        });
+        const config = { 
+            width: document.getElementById('labelWidth').value, 
+            height: document.getElementById('labelHeight').value, 
+            preset: document.getElementById('presetSize').value, 
+            labelsPerRow: document.getElementById('labelsPerRow').value,
+            labelGap: document.getElementById('labelGap').value,
+            elements: elements 
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+        const anchor = document.createElement('a');
+        anchor.setAttribute("href", dataStr);
+        anchor.setAttribute("download", "thiet_ke_tem_excel_v7.8.json");
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+    }
+
+    /* CẬP NHẬT: Phục hồi cấu hình số lượng tem khi Import JSON */
+    function importTemplateFromFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const config = JSON.parse(e.target.result);
+                document.getElementById('labelWidth').value = config.width;
+                document.getElementById('labelHeight').value = config.height;
+                document.getElementById('presetSize').value = config.preset;
+                if(config.labelsPerRow) document.getElementById('labelsPerRow').value = config.labelsPerRow;
+                if(config.labelGap) document.getElementById('labelGap').value = config.labelGap;
+                
+                resizeCanvas();
+                document.getElementById('labelCanvas').innerHTML = "";
+                selectedElement = null;
+                
+                config.elements.forEach(item => {
+                    if (item.type === 'text') {
+                        addTextElement(item.textValue, item.top, item.left, item.fontSize, item.isBold, item.excelBind, item.width);
+                    } else if (item.type === 'barcode') {
+                        let fmt = item.barcodeFormat ? String(item.barcodeFormat).toLowerCase() : "code128";
+                        addBarcodeElement(item.barcodeValue, item.top, item.left, fmt, item.barcodeWidth, item.barcodeHeight, item.qrSize, item.excelBind, item.altTextSize);
+                    } else if (item.type === 'shape' || item.elementType) {
+                        addShapeElement(item.elementType, item.top, item.left, item.width, item.height, item.thicknessMm);
+                    }
+                });
+                alert("Đã khôi phục thiết kế hoàn chỉnh thành công!");
+            } catch (err) { alert("File thiết kế lỗi!"); }
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('labelCanvas').addEventListener('mousedown', function(e) {
+        if(e.target === this) {
+            if(selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = null;
+            document.getElementById('btnDelete').style.display = 'none';
+            document.getElementById('textPropertyBox').style.display = 'none';
+            document.getElementById('barcodePropertyBox').style.display = 'none';
+            document.getElementById('shapePropertyBox').style.display = 'none';
+        }
+    });
+
+    window.onload = resizeCanvas;
+</script>
+</body>
+</html>
