@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Thiết Kế & In Tem Hàng Loạt Từ Excel - Bản V1.0</title>
+    <title>Hệ Thống Thiết Kế & In Tem Hàng Loạt Từ Excel - Bản V7.8</title>
     <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@3.0.4/dist/bwip-js-min.js"></script>
@@ -27,6 +27,8 @@
         .btn { display: block; width: 100%; padding: 8px; background: #3498db; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; margin-top: 3px; }
         .btn:hover { background: #2980b9; }
         .btn-success { background: #2ecc71; }
+
+
         .btn-success:hover { background: #27ae60; }
         .btn-danger { background: #e74c3c; }
         .btn-danger:hover { background: #c0392b; }
@@ -49,8 +51,8 @@
             background: #fff;
             padding: 4px 10px;
             border-radius: 4px;
-         //   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-         //   border: 1px solid #dcdfe6;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border: 1px solid #dcdfe6;
         }
         .zoom-controls label { font-size: 12px; font-weight: 600; color: #34495e; white-space: nowrap; }
         .zoom-controls select { padding: 2px 4px; border-radius: 3px; border: 1px solid #ccc; font-size: 12px; font-weight: bold; cursor: pointer; background: transparent; width: auto; }
@@ -83,7 +85,7 @@
             width: 396.9px; 
             height: 83.16px; 
             border: 1px dashed #e74c3c;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            /* box-shadow: 0 4px 12px rgba(0,0,0,0.2); */
         }
 
         /* Khối quản lý danh sách Excel nâng cao */
@@ -149,9 +151,11 @@
         .resizer.r  { right: -4px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
         .resizer.b  { bottom: -4px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
 
-        .barcode-element > canvas { display: block !important; pointer-events: none; }
-        .barcode-element div canvas { display: none !important; }
-        .barcode-element div { display: block; pointer-events: none; }
+        .barcode-element > canvas { display: block !important; pointer-events: none; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; }
+        .barcode-element div:not(.resizer) canvas { display: none !important; }
+        .barcode-element div:not(.resizer) { display: block; pointer-events: none; }
+        .barcode-element .resizer { pointer-events: auto; }
+        .draggable-element.out-of-bounds { outline: 2px dashed #e74c3c !important; box-shadow: 0 0 0 2px rgba(231,76,60,0.35); }
 
         /* Cập nhật CSS Print cho phép nhiều tem 1 hàng */
         @media print {
@@ -210,7 +214,18 @@
                 <label style="color:#e67e22;">Khoảng cách ngang (mm):</label>
                 <input type="number" id="labelGap" value="2" min="0" step="0.5">
             </div>
+            <div class="form-group" style="background:#fff6e5; padding:6px; border-radius:4px; margin-top:4px;">
+                <label style="color:#d35400; font-weight:bold;">🖨️ Độ phân giải đầu in (DPI):</label>
+                <select id="printerDpiSelect" onchange="updatePrinterDpi()">
+                    <option value="203">203 dpi (phổ biến - Zebra/TSC giá rẻ)</option>
+                    <option value="300">300 dpi (phổ thông cao cấp)</option>
+                    <option value="406">406 dpi</option>
+                    <option value="600">600 dpi (mã vạch/module siêu nhỏ)</option>
+                </select>
+                <div style="font-size:10px; color:#7f8c8d; margin-top:2px;">Dùng để tính số dot/vạch, cảnh báo khi module quá nhỏ để máy in tái tạo được.</div>
+            </div>
         </div>
+
 
         <div>
             <h3>2. Kết Nối Dữ Liệu Excel</h3>
@@ -298,19 +313,26 @@
                     </select>
                 </div>
                 <div id="controlsFor1D">
+                    <div class="form-group" style="background:#eaf6ff; padding:6px; border-radius:4px;">
+                        <label style="color:#2980b9; font-weight:bold;">📐 Chọn theo bảng chuẩn (số dot nguyên @ DPI đang chọn):</label>
+                        <select id="barcodeDotPreset" onchange="applyBarcodeDotPreset()"></select>
+                        <div style="font-size:10px; color:#7f8c8d; margin-top:2px;">Khuyến nghị dùng bảng này để vạch luôn tròn số dot in - tránh méo tỷ lệ gây quét lỗi. Khi đổi DPI, module sẽ tự tính lại theo đúng số dot đã chọn.</div>
+                    </div>
                     <div class="form-group" style="display:inline-block; width:48%;">
-                        <label>Độ rộng vạch (Scale):</label>
-                        <input type="number" id="barcodeWidthSlider" min="1" max="4" step="1" value="2" oninput="updateBarcodeProperties()">
+                        <label>Độ rộng vạch - X-dim (mil) <span style="color:#888;">(tự do)</span>:</label>
+                        <input type="number" id="barcodeModuleMil" min="2" max="60" step="0.5" value="8" oninput="onManualModuleMilInput()">
                     </div>
                     <div class="form-group" style="display:inline-block; width:48%; float:right;">
-                        <label>Chiều cao vạch:</label>
-                        <input type="number" id="barcodeHeightSlider" min="10" max="150" value="20" oninput="updateBarcodeProperties()">
+                        <label>Chiều cao vạch (mm):</label>
+                        <input type="number" id="barcodeHeightMm" min="2" max="60" step="0.5" value="15" oninput="updateBarcodeProperties()">
                     </div>
+                    <div id="barcodeModuleInfo" style="clear:both; font-size:10px; padding:4px 6px; border-radius:4px; margin:4px 0; background:#eee;"></div>
                     <div class="form-group">
                         <label style="color:#2980b9;">Cỡ chữ mã vạch (px):</label>
                         <input type="number" id="barcodeTextSizeSlider" min="1" max="30" value="12" oninput="updateBarcodeProperties()">
                     </div>
                 </div>
+                <div id="barcodeBoundsWarning" style="display:none; font-size:11px; font-weight:bold; color:#fff; background:#e74c3c; padding:5px 6px; border-radius:4px; margin:4px 0;">⚠️ Mã vạch đang vượt ra ngoài khổ tem! Phần vượt ra sẽ bị CẮT khi in → có thể gây lỗi quét. Hãy kéo nhỏ lại hoặc dịch vào trong khung.</div>
                 <div id="controlsForQR" style="display:none;">
                     <div class="form-group">
                         <label>Kích thước QR (px):</label>
@@ -393,6 +415,183 @@
     let selectedElement = null;
     let excelData = null;
     let currentZoomScale = 1.0; 
+    let printerDPI = 203;
+
+    /* =========================================================================
+       BARCODE PHYSICAL SIZE ENGINE
+       ---------------------------------------------------------------------
+       bwip-js chỉ nhận "scale" là SỐ NGUYÊN (1,2,3...) và render ở nền 72dpi.
+       => scale=1 đã tương đương module ~13.9 mil (0.35mm) - đây là lý do
+          mã vạch KHÔNG kéo nhỏ hơn được nếu ta chỉnh trực tiếp "scale".
+       Giải pháp: luôn render bwip ở scale=1 (raster gốc, nét nhất bwip có),
+       sau đó dùng CSS để "in ảnh" (canvas) ra đúng kích thước vật lý (mm)
+       mà người dùng chọn (module mil bất kỳ, có thể nhỏ tới 2-3 mil).
+       Việc scan được hay không ở mức mil đó phụ thuộc vào DPI đầu in thật,
+       nên ta tính số dot/module theo DPI đã chọn để cảnh báo người dùng.
+    ========================================================================= */
+    const BWIP_BASE_DPI = 72;
+    const NATIVE_MODULE_MIL = (25.4 / BWIP_BASE_DPI) / 0.0254; // ~13.89 mil ở scale=1
+
+    function mmFromMil(mil) { return mil * 0.0254; }
+
+    function computeDotsPerModule(moduleMil, dpi) {
+        // dots = moduleMil * dpi / 1000  (rút gọn từ moduleMm * dotsPerMm)
+        return (moduleMil * dpi) / 1000;
+    }
+
+    // Hằng số quy đổi "Density" (ký tự/mm) tham chiếu theo bảng chuẩn của các
+    // phần mềm in mã vạch chuyên dụng (BarTender/NiceLabel...): Density = K / X-dim(mil),
+    // với K ~ 3.6707 (đã đối chiếu khớp bảng 600/300/203dpi, dot 1-6 do người dùng cung cấp).
+    // Đây là số liệu THAM KHẢO để so sánh, không ảnh hưởng đến việc render mã vạch.
+    const DENSITY_K = 3.6707;
+    function computeDensity(moduleMil) { return DENSITY_K / moduleMil; }
+
+    // X-dim (mil) khi chốt theo N dot nguyên ở 1 DPI cụ thể - đây là cách làm
+    // ĐÚNG chuẩn ngành: luôn cho vạch rơi đúng vào lưới dot vật lý của đầu in,
+    // tránh làm tròn lệch giữa các vạch (nguyên nhân gây quét lỗi không ổn định).
+    function milFromDots(dots, dpi) { return (dots * 1000) / dpi; }
+
+    function updatePrinterDpi() {
+        printerDPI = parseInt(document.getElementById('printerDpiSelect').value) || 203;
+        populateBarcodeDotPresets();
+
+        // Với các mã vạch đã "chốt theo bảng dot" (dataset.barcodeModuleDots có giá trị),
+        // tự tính lại X-dim (mil) theo DPI mới - đúng yêu cầu "đổi DPI thì tỷ lệ đổi theo bảng".
+        document.querySelectorAll('.barcode-element').forEach(function(el) {
+            const dots = parseInt(el.dataset.barcodeModuleDots || "");
+            if (dots) {
+                el.dataset.barcodeModuleMil = milFromDots(dots, printerDPI).toFixed(3);
+                applyBarcodeDisplaySize(el);
+            }
+        });
+
+        if (selectedElement && selectedElement.classList.contains('barcode-element')) {
+            document.getElementById('barcodeModuleMil').value = selectedElement.dataset.barcodeModuleMil;
+            syncDotPresetSelectToElement(selectedElement);
+            refreshBarcodeModuleInfo();
+        }
+    }
+
+    // Sinh danh sách tuỳ chọn 1x-8x dot cho DPI hiện tại vào <select id="barcodeDotPreset">
+    function populateBarcodeDotPresets() {
+        const sel = document.getElementById('barcodeDotPreset');
+        if (!sel) return;
+        const keepValue = sel.value;
+        sel.innerHTML = '<option value="">-- Tự do (không chốt dot) --</option>';
+        for (let d = 1; d <= 8; d++) {
+            const mil = milFromDots(d, printerDPI);
+            const density = computeDensity(mil);
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = `${d} dot = ${mil.toFixed(2)} mil (${mmFromMil(mil).toFixed(3)}mm) · ~${density.toFixed(3)} ký tự/mm`;
+            sel.appendChild(opt);
+        }
+        if (keepValue) sel.value = keepValue;
+    }
+
+    // Đồng bộ dropdown preset theo trạng thái thật của mã vạch đang chọn
+    function syncDotPresetSelectToElement(el) {
+        const sel = document.getElementById('barcodeDotPreset');
+        if (!sel) return;
+        sel.value = el.dataset.barcodeModuleDots || "";
+    }
+
+    // Người dùng chọn 1 dòng trong bảng chuẩn -> chốt module theo đúng N dot ở DPI hiện tại
+    function applyBarcodeDotPreset() {
+        if (!selectedElement || !selectedElement.classList.contains('barcode-element')) return;
+        const sel = document.getElementById('barcodeDotPreset');
+        const dots = parseInt(sel.value || "");
+        if (dots) {
+            selectedElement.dataset.barcodeModuleDots = dots;
+            selectedElement.dataset.barcodeModuleMil = milFromDots(dots, printerDPI).toFixed(3);
+        } else {
+            selectedElement.dataset.barcodeModuleDots = "";
+        }
+        document.getElementById('barcodeModuleMil').value = selectedElement.dataset.barcodeModuleMil;
+        applyBarcodeDisplaySize(selectedElement);
+        refreshBarcodeModuleInfo();
+    }
+
+    // Người dùng gõ tay vào ô mil -> coi là tuỳ chỉnh, bỏ khoá dot (nếu đang khoá)
+    function onManualModuleMilInput() {
+        if (!selectedElement || !selectedElement.classList.contains('barcode-element')) return;
+        selectedElement.dataset.barcodeModuleDots = "";
+        const sel = document.getElementById('barcodeDotPreset');
+        if (sel) sel.value = "";
+        updateBarcodeProperties();
+    }
+
+    function refreshBarcodeModuleInfo() {
+        const infoBox = document.getElementById('barcodeModuleInfo');
+        if (!infoBox) return;
+        const mil = parseFloat(document.getElementById('barcodeModuleMil').value) || 0;
+        const mm = mmFromMil(mil);
+        const dots = computeDotsPerModule(mil, printerDPI);
+        const isLocked = selectedElement && selectedElement.dataset.barcodeModuleDots;
+        let color = '#27ae60', msg = 'Tốt - đủ dot để in & scan ổn định.';
+        if (dots < 1) { color = '#c0392b'; msg = 'RẤT RỦI RO: dưới 1 dot - đầu in không thể tái tạo module này ở DPI hiện tại.'; }
+        else if (dots < 2) { color = '#e74c3c'; msg = 'Cảnh báo: dưới 2 dot - dễ mất nét, khó scan ở DPI hiện tại. Nên tăng DPI máy in hoặc tăng module.'; }
+        else if (dots < 2.5) { color = '#e67e22'; msg = 'Chấp nhận được nhưng nên >= 2.5-3 dot để scan ổn định lâu dài.'; }
+        if (!isLocked && Math.abs(dots - Math.round(dots)) > 0.03) {
+            msg += ' ⚠️ Module KHÔNG tròn số dot ở DPI này - có thể bị méo tỷ lệ vạch khi in, nên chọn theo bảng chuẩn bên trên.';
+        }
+        infoBox.style.background = color + '22';
+        infoBox.style.color = color;
+        infoBox.innerHTML = `<b>${mil} mil</b> = ${mm.toFixed(3)}mm ≈ <b>${dots.toFixed(2)} dot</b> @ ${printerDPI}dpi ${isLocked ? '🔒(theo bảng)' : ''}<br>${msg}`;
+    }
+
+    // Tính & áp dụng kích thước CSS (mm chuẩn) cho canvas/QR do bwip hoặc QRCode.js tạo ra,
+    // dựa trên module width (mil) mong muốn - không phụ thuộc vào scale nguyên của bwip.
+    function applyBarcodeDisplaySize(el) {
+        const format = String(el.dataset.barcodeFormat || '').toLowerCase();
+        const canvas = el.querySelector('canvas');
+        if (!canvas) return;
+
+        if (format !== 'qr') {
+            const moduleMil = parseFloat(el.dataset.barcodeModuleMil) || 8;
+            const scaleFactor = moduleMil / NATIVE_MODULE_MIL;
+
+            // canvas.width/height ở đây là pixel "gốc" mà bwip render tại 72dpi, scale=1
+            const nativeWidthMm = canvas.width * (25.4 / BWIP_BASE_DPI);
+            const nativeHeightMm = canvas.height * (25.4 / BWIP_BASE_DPI);
+
+            const displayWidthMm = nativeWidthMm * scaleFactor;   // width tỷ lệ theo module
+            const displayHeightMm = nativeHeightMm;               // height đã đúng mm thật (bwip height nhận mm trực tiếp)
+
+            const wPx = displayWidthMm * MM_TO_PX;
+            const hPx = displayHeightMm * MM_TO_PX;
+
+            canvas.style.width = wPx + 'px';
+            canvas.style.height = hPx + 'px';
+            el.style.width = wPx + 'px';
+            el.style.height = hPx + 'px';
+        }
+        // QRCode.js đã tự vẽ đúng kích thước px yêu cầu (dataset.qrSize), không cần chỉnh thêm ở đây.
+
+        checkBarcodeBounds(el);
+    }
+
+    // Cảnh báo trực quan khi mã vạch/QR bị đẩy ra ngoài khổ tem -> phần vượt ra
+    // sẽ bị CẮT khi in (do .label-canvas có overflow:hidden), dễ gây quét lỗi
+    // dù mắt thường nhìn qua không để ý (đặc biệt khi tăng module mil làm
+    // mã vạch rộng ra và chạm/lấn qua rìa tem).
+    function checkBarcodeBounds(el) {
+        const canvasEl = document.getElementById('labelCanvas');
+        if (!canvasEl) return;
+        const canvasW = canvasEl.offsetWidth;
+        const canvasH = canvasEl.offsetHeight;
+        const left = el.offsetLeft;
+        const top = el.offsetTop;
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        const outOfBounds = (left < 0 || top < 0 || (left + w) > canvasW || (top + h) > canvasH);
+        el.classList.toggle('out-of-bounds', outOfBounds);
+
+        const warnBox = document.getElementById('barcodeBoundsWarning');
+        if (warnBox && el === selectedElement) {
+            warnBox.style.display = outOfBounds ? 'block' : 'none';
+        }
+    }
 
     function resizeCanvas() {
         const wMm = parseFloat(document.getElementById('labelWidth').value) || 105;
@@ -551,7 +750,7 @@
         selectElement(el);
     }
 
-    function addBarcodeElement(code, top, left, format, width, height, qrSize, bindCol, altTextSize) {
+    function addBarcodeElement(code, top, left, format, moduleMil, heightMm, qrSize, bindCol, altTextSize) {
         const val = code || document.getElementById('barcodeInput').value.trim();
         if(!val) return;
 
@@ -567,8 +766,10 @@
 
         el.dataset.barcodeValue = val;
         el.dataset.barcodeFormat = currentFormat;
-        el.dataset.barcodeWidth = width || "2";
-        el.dataset.barcodeHeight = height || "10";
+        // Mặc định chốt theo 3 dot ở DPI hiện tại (an toàn, đủ nét) - trừ khi có giá trị truyền vào cụ thể (VD từ file thiết kế cũ)
+        el.dataset.barcodeModuleMil = moduleMil || milFromDots(3, printerDPI).toFixed(3);
+        el.dataset.barcodeModuleDots = moduleMil ? "" : "3";
+        el.dataset.barcodeHeightMm = heightMm || "15";    // chiều cao vạch, mm thật
         el.dataset.qrSize = qrSize || "60";
         el.dataset.altTextSize = altTextSize || "11"; 
         el.dataset.excelBind = bindCol || "";
@@ -576,6 +777,7 @@
         renderCodeGraphics(el);
         makeElementDraggable(el);
         selectElement(el);
+        return el;
     }
 
     function renderCodeGraphics(el) {
@@ -587,23 +789,140 @@
             const qrDiv = document.createElement('div');
             el.appendChild(qrDiv);
             new QRCode(qrDiv, { text: val, width: parseInt(el.dataset.qrSize), height: parseInt(el.dataset.qrSize), correctLevel : QRCode.CorrectLevel.H });
+            el.style.width = (parseInt(el.dataset.qrSize)) + 'px';
+            el.style.height = (parseInt(el.dataset.qrSize)) + 'px';
+            checkBarcodeBounds(el);
         } else {
             const nativeCanvas = document.createElement('canvas');
             el.appendChild(nativeCanvas);
             try {
+                // LUÔN render ở scale=1 (raster gốc, nét nhất bwip-js hỗ trợ).
+                // Kích thước hiển thị thật (theo module mil người dùng chọn)
+                // được áp dụng riêng bằng CSS ở applyBarcodeDisplaySize(), vì
+                // bwip-js không cho phép "scale" nhỏ hơn 1 (không thể tạo module < ~13.9mil
+                // trực tiếp từ tham số scale).
                 bwipjs.toCanvas(nativeCanvas, {
-                    bcid: format,       
-                    text: val,          
-                    scale: parseInt(el.dataset.barcodeWidth) || 2, 
-                    height: parseInt(el.dataset.barcodeHeight) || 40,    
-                    includetext: false,  
+                    bcid: format,
+                    text: val,
+                    scale: 1,
+                    height: parseFloat(el.dataset.barcodeHeightMm) || 15,
+                    includetext: false,
                     textsize: parseInt(el.dataset.altTextSize) || 12,
                     textxalign: 'center'
                 });
+                applyBarcodeDisplaySize(el);
             } catch (e) {
                 el.innerHTML = `<span style="color:red; font-size:11px;">Lỗi định dạng</span>`;
             }
         }
+        // Giữ lại các tay kéo resize khi render lại (innerHTML đã bị xoá ở trên)
+        addBarcodeResizers(el);
+    }
+
+    // Tay kéo resize riêng cho mã vạch/QR: kéo cạnh phải đổi module width (mil),
+    // kéo cạnh dưới đổi chiều cao vạch (mm), kéo góc đổi đồng thời cả hai theo tỷ lệ.
+    function addBarcodeResizers(el) {
+        const resizerR = document.createElement('div');
+        resizerR.className = 'resizer r';
+        el.appendChild(resizerR);
+
+        const resizerB = document.createElement('div');
+        resizerB.className = 'resizer b';
+        el.appendChild(resizerB);
+
+        const resizerRB = document.createElement('div');
+        resizerRB.className = 'resizer rb';
+        el.appendChild(resizerRB);
+
+        makeBarcodeResizable(el, resizerR, 'horizontal');
+        makeBarcodeResizable(el, resizerB, 'vertical');
+        makeBarcodeResizable(el, resizerRB, 'both');
+    }
+
+    function makeBarcodeResizable(el, resizer, direction) {
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const format = String(el.dataset.barcodeFormat || '').toLowerCase();
+            const startWidth = el.offsetWidth;
+            const startHeight = el.offsetHeight;
+            const startModuleMil = parseFloat(el.dataset.barcodeModuleMil) || 8;
+            const startHeightMm = parseFloat(el.dataset.barcodeHeightMm) || 15;
+            const startQrSize = parseInt(el.dataset.qrSize) || 60;
+            const startX = e.clientX;
+            const startY = e.clientY;
+            let needsFullRerender = false;
+
+            function doResize(moveEvent) {
+                moveEvent.preventDefault();
+                const dx = (moveEvent.clientX - startX) / currentZoomScale;
+                const dy = (moveEvent.clientY - startY) / currentZoomScale;
+
+                if (format === 'qr') {
+                    // QR: 1 tay kéo duy nhất co giãn đều (đối xứng, vì QR luôn vuông)
+                    let delta = (direction === 'vertical') ? dy : dx;
+                    let newSize = Math.max(15, startQrSize + delta);
+                    el.dataset.qrSize = Math.round(newSize);
+                    el.style.width = newSize + 'px';
+                    el.style.height = newSize + 'px';
+                    const qrCanvas = el.querySelector('canvas');
+                    if (qrCanvas) { qrCanvas.style.width = newSize + 'px'; qrCanvas.style.height = newSize + 'px'; }
+                    if (el === selectedElement && document.getElementById('qrSizeSlider')) {
+                        document.getElementById('qrSizeSlider').value = el.dataset.qrSize;
+                    }
+                    checkBarcodeBounds(el);
+                    needsFullRerender = true;
+                    return;
+                }
+
+                if (direction === 'horizontal' || direction === 'both') {
+                    let newWidth = Math.max(4, startWidth + dx);
+                    let newModuleMil = startModuleMil * (newWidth / startWidth);
+                    if (newModuleMil < 2) newModuleMil = 2;      // sàn kỹ thuật ~2 mil
+                    if (newModuleMil > 60) newModuleMil = 60;
+                    el.dataset.barcodeModuleMil = newModuleMil.toFixed(2);
+                    el.dataset.barcodeModuleDots = ""; // kéo tay = tuỳ chỉnh, bỏ khoá dot
+                }
+                if (direction === 'vertical' || direction === 'both') {
+                    let newHeight = Math.max(4, startHeight + dy);
+                    let newHeightMm = startHeightMm * (newHeight / startHeight);
+                    if (newHeightMm < 2) newHeightMm = 2;
+                    if (newHeightMm > 80) newHeightMm = 80;
+                    el.dataset.barcodeHeightMm = newHeightMm.toFixed(2);
+                    needsFullRerender = true; // height thay đổi cần bwip render lại (bar height thật)
+                }
+
+                // Cập nhật kích thước hiển thị ngay (chỉ CSS, không cần render lại bwip
+                // khi chỉ đổi module width - giúp kéo mượt, không giật)
+                applyBarcodeDisplaySize(el);
+
+                if (el === selectedElement) {
+                    if (document.getElementById('barcodeModuleMil')) document.getElementById('barcodeModuleMil').value = el.dataset.barcodeModuleMil;
+                    if (document.getElementById('barcodeHeightMm')) document.getElementById('barcodeHeightMm').value = el.dataset.barcodeHeightMm;
+                    syncDotPresetSelectToElement(el);
+                    refreshBarcodeModuleInfo();
+                }
+            }
+
+            function stopResize() {
+                document.removeEventListener('mousemove', doResize);
+                document.removeEventListener('mouseup', stopResize);
+                // Render lại bwip 1 lần lúc thả chuột để raster luôn khớp & nét
+                // (chiều cao vạch thật đổi thì buộc phải render lại; module width
+                // thì không bắt buộc nhưng render lại cũng để đồng bộ dataset).
+                if (format !== 'qr') {
+                    renderCodeGraphics(el);
+                    if (el === selectedElement) selectElement(el);
+                } else if (needsFullRerender) {
+                    renderCodeGraphics(el);
+                    if (el === selectedElement) selectElement(el);
+                }
+            }
+
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        });
     }
 
     function addShapeElement(shapeType, top, left, width, height, thicknessMm) {
@@ -760,7 +1079,7 @@
             card.style.height = (hMm * MM_TO_PX) + 'px';
             card.style.display = "inline-block";
             card.style.position = "relative";
-            card.style.border = "1px dashed #bdc3c7"; 
+           // card.style.border = "1px dashed #bdc3c7"; 
 
             templateElements.forEach(tmplEl => {
                 const clone = document.createElement('div');
@@ -799,12 +1118,15 @@
                             bwipjs.toCanvas(bulkCanvas, {
                                 bcid: format,
                                 text: finalCode,
-                                scale: parseInt(tmplEl.dataset.barcodeWidth || 2),
-                                height: parseInt(tmplEl.dataset.barcodeHeight || 40),
+                                scale: 1,
+                                height: parseFloat(tmplEl.dataset.barcodeHeightMm || 15),
                                 includetext: false, 
                                 textsize: parseInt(tmplEl.dataset.altTextSize || 12),
                                 textxalign: 'center'
                             });
+                            clone.dataset.barcodeFormat = format;
+                            clone.dataset.barcodeModuleMil = tmplEl.dataset.barcodeModuleMil || 8;
+                            applyBarcodeDisplaySize(clone);
 
                             const textLabel = document.createElement('div');
                             textLabel.style.width = "100%";
@@ -872,11 +1194,18 @@
         } else {
             document.getElementById('controlsFor1D').style.display = 'block';
             document.getElementById('controlsForQR').style.display = 'none';
-            selectedElement.dataset.barcodeWidth = document.getElementById('barcodeWidthSlider').value;
-            selectedElement.dataset.barcodeHeight = document.getElementById('barcodeHeightSlider').value;
+            let mil = parseFloat(document.getElementById('barcodeModuleMil').value) || 8;
+            if (mil < 2) mil = 2;
+            if (mil > 60) mil = 60;
+            let hMm = parseFloat(document.getElementById('barcodeHeightMm').value) || 15;
+            if (hMm < 2) hMm = 2;
+            selectedElement.dataset.barcodeModuleMil = mil;
+            selectedElement.dataset.barcodeHeightMm = hMm;
             selectedElement.dataset.altTextSize = document.getElementById('barcodeTextSizeSlider').value; 
+            refreshBarcodeModuleInfo();
         }
         renderCodeGraphics(selectedElement);
+        if (selectedElement) makeElementDraggable(selectedElement);
     }
 
     function makeElementDraggable(el) {
@@ -938,6 +1267,7 @@
             document.getElementById('barcodeEditInput').value = el.dataset.excelBind ? "" : el.dataset.barcodeValue;
             document.getElementById('barcodeEditFormat').value = format;
             document.getElementById('barcodeExcelBind').value = el.dataset.excelBind || "";
+            checkBarcodeBounds(el);
             
             if(format === "qr") {
                 document.getElementById('controlsFor1D').style.display = 'none';
@@ -946,9 +1276,12 @@
             } else {
                 document.getElementById('controlsFor1D').style.display = 'block';
                 document.getElementById('controlsForQR').style.display = 'none';
-                document.getElementById('barcodeWidthSlider').value = el.dataset.barcodeWidth || 2;
-                document.getElementById('barcodeHeightSlider').value = el.dataset.barcodeHeight || 40;
+                document.getElementById('barcodeModuleMil').value = el.dataset.barcodeModuleMil || 8;
+                document.getElementById('barcodeHeightMm').value = el.dataset.barcodeHeightMm || 15;
                 document.getElementById('barcodeTextSizeSlider').value = el.dataset.altTextSize || 12; 
+                populateBarcodeDotPresets();
+                syncDotPresetSelectToElement(el);
+                refreshBarcodeModuleInfo();
             }
         } else if (el.dataset.elementType) {
             document.getElementById('shapePropertyBox').style.display = 'block';
@@ -986,8 +1319,9 @@
                 isBold: isText ? item.dataset.isBold : '',
                 barcodeValue: (!isText && !isShape) ? item.dataset.barcodeValue : '',
                 barcodeFormat: (!isText && !isShape) ? String(item.dataset.barcodeFormat).toLowerCase() : 'code128',
-                barcodeWidth: (!isText && !isShape) ? item.dataset.barcodeWidth : '',
-                barcodeHeight: (!isText && !isShape) ? item.dataset.barcodeHeight : '',
+                barcodeModuleMil: (!isText && !isShape) ? item.dataset.barcodeModuleMil : '',
+                barcodeModuleDots: (!isText && !isShape) ? item.dataset.barcodeModuleDots : '',
+                barcodeHeightMm: (!isText && !isShape) ? item.dataset.barcodeHeightMm : '',
                 qrSize: (!isText && !isShape) ? item.dataset.qrSize : '',
                 altTextSize: (!isText && !isShape) ? item.dataset.altTextSize : '', 
                 excelBind: item.dataset.excelBind || ''
@@ -1033,7 +1367,15 @@
                         addTextElement(item.textValue, item.top, item.left, item.fontSize, item.isBold, item.excelBind, item.width);
                     } else if (item.type === 'barcode') {
                         let fmt = item.barcodeFormat ? String(item.barcodeFormat).toLowerCase() : "code128";
-                        addBarcodeElement(item.barcodeValue, item.top, item.left, fmt, item.barcodeWidth, item.barcodeHeight, item.qrSize, item.excelBind, item.altTextSize);
+                        // Tương thích file thiết kế cũ (barcodeWidth = scale nguyên bwip) -> quy đổi tạm sang mil
+                        let mil = item.barcodeModuleMil;
+                        if (!mil && item.barcodeWidth) mil = (parseFloat(item.barcodeWidth) || 1) * NATIVE_MODULE_MIL;
+                        let hMm = item.barcodeHeightMm;
+                        if (!hMm && item.barcodeHeight) hMm = parseFloat(item.barcodeHeight) || 15;
+                        const created = addBarcodeElement(item.barcodeValue, item.top, item.left, fmt, mil, hMm, item.qrSize, item.excelBind, item.altTextSize);
+                        if (item.barcodeModuleDots && created) {
+                            created.dataset.barcodeModuleDots = item.barcodeModuleDots;
+                        }
                     } else if (item.type === 'shape' || item.elementType) {
                         addShapeElement(item.elementType, item.top, item.left, item.width, item.height, item.thicknessMm);
                     }
@@ -1055,7 +1397,10 @@
         }
     });
 
-    window.onload = resizeCanvas;
+    window.onload = function() {
+        resizeCanvas();
+        populateBarcodeDotPresets();
+    };
 </script>
 </body>
 </html>
